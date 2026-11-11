@@ -1,4 +1,4 @@
-package oit.is.team8.z14400;
+package oit.is.team8.z14400.model;
 
 public class User {
   private Long id;
