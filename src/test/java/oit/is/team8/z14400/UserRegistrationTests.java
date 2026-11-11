@@ -1,6 +1,7 @@
 package oit.is.team8.z14400;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -12,6 +13,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.web.servlet.MockMvc;
+
+import oit.is.team8.z14400.model.User;
+import oit.is.team8.z14400.model.UserMapper;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -26,7 +30,8 @@ class UserRegistrationTests {
   void 未登録のユーザー名で登録すると完了表示になる() throws Exception {
     mockMvc.perform(post("/register")
         .param("username", "new-user")
-        .param("password", "pass1234"))
+        .param("password", "pass1234")
+        .with(csrf()))
         .andExpect(status().isOk())
         .andExpect(view().name("register"))
         .andExpect(content().string(containsString("登録が完了しました")));
@@ -43,7 +48,8 @@ class UserRegistrationTests {
 
     mockMvc.perform(post("/register")
         .param("username", username)
-        .param("password", "new-password"))
+        .param("password", "new-password")
+        .with(csrf()))
         .andExpect(status().isOk())
         .andExpect(view().name("register"))
         .andExpect(content().string(containsString("ユーザー名が既に登録されています")));
