@@ -1,4 +1,4 @@
-package oit.is.team8.z14400;
+package oit.is.team8.z14400.controller;
 
 import java.util.List;
 import java.util.Map;
@@ -17,6 +17,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
+
+import oit.is.team8.z14400.model.Task;
+import oit.is.team8.z14400.model.TaskMapper;
 
 @RestController
 @RequestMapping("/api/tasks")

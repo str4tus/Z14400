@@ -18,6 +18,9 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
+import oit.is.team8.z14400.model.Task;
+import oit.is.team8.z14400.model.TaskMapper;
+
 @SpringBootTest
 @AutoConfigureMockMvc
 class TaskUpdateDeleteTests {

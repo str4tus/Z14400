@@ -16,6 +16,8 @@ import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
+import oit.is.team8.z14400.model.Task;
+
 @SpringBootTest
 @AutoConfigureMockMvc
 class TaskCreateListTests {
