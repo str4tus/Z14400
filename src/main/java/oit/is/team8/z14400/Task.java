@@ -5,11 +5,13 @@ import java.time.LocalDateTime;
 public class Task {
 
   private Long id;
+  private String creator;
   private String content;
   private String assignee;
   private String status;
   private LocalDateTime startAt;
   private LocalDateTime endAt;
+  private boolean canDelete;
 
   public Task() {
   }
@@ -20,6 +22,14 @@ public class Task {
 
   public void setId(Long id) {
     this.id = id;
+  }
+
+  public String getCreator() {
+    return creator;
+  }
+
+  public void setCreator(String creator) {
+    this.creator = creator;
   }
 
   public String getContent() {
@@ -60,5 +70,13 @@ public class Task {
 
   public void setEndAt(LocalDateTime endAt) {
     this.endAt = endAt;
+  }
+
+  public boolean isCanDelete() {
+    return canDelete;
+  }
+
+  public void setCanDelete(boolean canDelete) {
+    this.canDelete = canDelete;
   }
 }
