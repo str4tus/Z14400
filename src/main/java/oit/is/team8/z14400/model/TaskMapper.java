@@ -1,4 +1,4 @@
-package oit.is.team8.z14400;
+package oit.is.team8.z14400.model;
 
 import java.util.List;
 
