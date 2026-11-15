@@ -35,3 +35,8 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### Local history and PR drafts ###
+/.log/
+/docs/temp/*
+!/docs/temp/.gitkeep
