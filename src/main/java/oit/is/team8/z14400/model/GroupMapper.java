@@ -12,6 +12,8 @@ import org.springframework.dao.DuplicateKeyException;
 @Mapper
 public interface GroupMapper {
 
+  String JOIN_ID_PATTERN = "^[A-Za-z0-9]{6}$";
+
   @Insert("""
       INSERT INTO task_groups (name, join_id, admin_user_id)
       VALUES (#{name}, #{joinId}, #{adminUserId})
@@ -27,6 +29,9 @@ public interface GroupMapper {
       throw new IllegalArgumentException("管理者は必須です");
     }
     if (group.getJoinId() != null && !group.getJoinId().isBlank()) {
+      if (!group.getJoinId().matches(JOIN_ID_PATTERN)) {
+        throw new IllegalArgumentException("参加IDは6桁の英数字で指定してください");
+      }
       insert(group);
       return group;
     }

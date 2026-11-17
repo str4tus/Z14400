@@ -124,6 +124,25 @@ class GroupMapperTests {
         () -> groupMapper.save(new Group("後続グループ", "ABC123", admin.getId())));
   }
 
+  @Test
+  void 指定済みの参加IDが6桁英数字でなければ保存できない() {
+    User admin = createUser("group-admin-join-format");
+
+    assertThrows(IllegalArgumentException.class,
+        () -> groupMapper.save(new Group("ハイフン付き", "ABC-12", admin.getId())));
+    assertThrows(IllegalArgumentException.class,
+        () -> groupMapper.save(new Group("短い参加ID", "short", admin.getId())));
+  }
+
+  @Test
+  void Mapperのinsertを直接呼び出しても6桁英数字でない参加IDはDB制約で保存できない() {
+    User admin = createUser("group-admin-db-format");
+    Group invalidGroup = new Group("DB制約確認", "ABC-12", admin.getId());
+
+    assertThrows(DataIntegrityViolationException.class,
+        () -> groupMapper.insert(invalidGroup));
+  }
+
   private User createUser(String username) {
     User user = new User(username, "encoded-password");
     userMapper.insert(user);
