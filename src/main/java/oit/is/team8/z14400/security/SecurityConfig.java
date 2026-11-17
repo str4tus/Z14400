@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 
 @Configuration
 @EnableWebSecurity
@@ -14,15 +15,18 @@ public class SecurityConfig {
   public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
     http.formLogin(login -> login
         .loginPage("/login")
-        .defaultSuccessUrl("/", true)
+        .defaultSuccessUrl("/home", true)
         .failureUrl("/login?error")
         .permitAll())
         .logout(logout -> logout
             .logoutUrl("/logout")
             .logoutSuccessUrl("/login?logout")
             .permitAll())
+        .exceptionHandling(exception -> exception
+            // 未認証で保護された画面へアクセスした場合はログイン画面ではなく入口ページへ誘導する
+            .authenticationEntryPoint(new LoginUrlAuthenticationEntryPoint("/")))
         .authorizeHttpRequests(authz -> authz
-            .requestMatchers("/login", "/register", "/css/**", "/js/**", "/images/**").permitAll()
+            .requestMatchers("/", "/login", "/register", "/css/**", "/js/**", "/images/**").permitAll()
             .requestMatchers("/h2-console/**").permitAll()
             .anyRequest().authenticated())
         .csrf(csrf -> csrf
