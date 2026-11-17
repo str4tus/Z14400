@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import oit.is.team8.z14400.model.User;
@@ -29,6 +30,25 @@ class UserLoginTests {
   private UserMapper userMapper;
 
   @Test
+  void 未認証でトップページにアクセスするとログインとユーザー登録を選べる入口ページが表示される() throws Exception {
+    mockMvc.perform(get("/"))
+        .andExpect(status().isOk())
+        .andExpect(content().string(containsString("href=\"/login\"")))
+        .andExpect(content().string(containsString("ログイン")))
+        .andExpect(content().string(containsString("href=\"/register\"")))
+        .andExpect(content().string(containsString("ユーザー登録")))
+        .andExpect(unauthenticated());
+  }
+
+  @Test
+  void 未認証で保護された画面にアクセスすると入口ページへリダイレクトされる() throws Exception {
+    mockMvc.perform(get("/home"))
+        .andExpect(status().is3xxRedirection())
+        .andExpect(redirectedUrl("/"))
+        .andExpect(unauthenticated());
+  }
+
+  @Test
   void ログイン画面を表示できる() throws Exception {
     mockMvc.perform(get("/login"))
         .andExpect(status().isOk())
@@ -37,15 +57,27 @@ class UserLoginTests {
   }
 
   @Test
-  void 登録済みユーザーでログインすると認証されタスク一覧へリダイレクトされる() throws Exception {
+  void 登録済みユーザーでログインすると認証されホーム画面へリダイレクトされる() throws Exception {
     String username = "login-success-user";
     String password = "loginpass123";
     userMapper.insert(new User(username, password));
 
     mockMvc.perform(formLogin("/login").user(username).password(password))
         .andExpect(status().is3xxRedirection())
-        .andExpect(redirectedUrl("/"))
+        .andExpect(redirectedUrl("/home"))
         .andExpect(authenticated().withUsername(username));
+  }
+
+  @Test
+  @WithMockUser(username = "home-user")
+  void 認証済みユーザーはホーム画面を表示できトップページからもホーム画面へリダイレクトされる() throws Exception {
+    mockMvc.perform(get("/home"))
+        .andExpect(status().isOk())
+        .andExpect(content().string(containsString("タスク一覧")));
+
+    mockMvc.perform(get("/"))
+        .andExpect(status().is3xxRedirection())
+        .andExpect(redirectedUrl("/home"));
   }
 
   @Test
