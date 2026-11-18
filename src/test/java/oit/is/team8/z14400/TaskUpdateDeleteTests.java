@@ -17,12 +17,18 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
 
+import oit.is.team8.z14400.model.Group;
+import oit.is.team8.z14400.model.GroupMapper;
 import oit.is.team8.z14400.model.Task;
 import oit.is.team8.z14400.model.TaskMapper;
+import oit.is.team8.z14400.model.User;
+import oit.is.team8.z14400.model.UserMapper;
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@Transactional
 class TaskUpdateDeleteTests {
 
   @Autowired
@@ -30,6 +36,12 @@ class TaskUpdateDeleteTests {
 
   @Autowired
   private TaskMapper taskMapper;
+
+  @Autowired
+  private GroupMapper groupMapper;
+
+  @Autowired
+  private UserMapper userMapper;
 
   @Test
   @WithMockUser(username = "task-owner")
@@ -42,10 +54,11 @@ class TaskUpdateDeleteTests {
   @Test
   @WithMockUser(username = "task-owner")
   void 作成者のタスク一覧だけ削除可能になる() throws Exception {
-    createTask("task-owner", "自分のタスク", "未着手");
-    createTask("different-user", "他人のタスク", "未着手");
+    Group group = createGroup("task-owner", "different-user");
+    createTask(group, "task-owner", "自分のタスク", "未着手");
+    createTask(group, "different-user", "他人のタスク", "未着手");
 
-    mockMvc.perform(get("/api/tasks"))
+    mockMvc.perform(get("/api/tasks").param("groupId", group.getId().toString()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[?(@.creator == 'task-owner')].canDelete", everyItem(is(true))))
         .andExpect(jsonPath("$[?(@.creator == 'different-user')].canDelete", everyItem(is(false))));
@@ -61,13 +74,14 @@ class TaskUpdateDeleteTests {
         .contentType("application/json")
         .content("""
             {
+              "groupId": %d,
               "content": "更新後",
               "assignee": "updated-assignee",
               "status": "進行中",
               "startAt": "2026-11-15T10:00:00",
               "endAt": "2026-11-15T11:00:00"
             }
-            """))
+            """.formatted(task.getGroupId())))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.content", is("更新後")))
         .andExpect(jsonPath("$.assignee", is("updated-assignee")))
@@ -99,7 +113,13 @@ class TaskUpdateDeleteTests {
   }
 
   private Task createTask(String creator, String content, String status) {
+    Group group = createGroup(creator);
+    return createTask(group, creator, content, status);
+  }
+
+  private Task createTask(Group group, String creator, String content, String status) {
     Task task = new Task();
+    task.setGroupId(group.getId());
     task.setCreator(creator);
     task.setContent(content);
     task.setAssignee(creator);
@@ -108,5 +128,22 @@ class TaskUpdateDeleteTests {
     task.setEndAt(LocalDateTime.of(2026, 11, 15, 10, 0));
     taskMapper.insert(task);
     return task;
+  }
+
+  private Group createGroup(String... usernames) {
+    User admin = new User(usernames[0], "encoded-password");
+    userMapper.insert(admin);
+    Group group = groupMapper.save(new Group("削除テストグループ", admin.getId()));
+    for (String username : usernames) {
+      User user = username.equals(admin.getUsername()) ? admin : createUser(username);
+      groupMapper.insertMembership(group.getId(), user.getId());
+    }
+    return group;
+  }
+
+  private User createUser(String username) {
+    User user = new User(username, "encoded-password");
+    userMapper.insert(user);
+    return user;
   }
 }
