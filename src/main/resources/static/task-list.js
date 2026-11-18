@@ -10,6 +10,7 @@ const createGroupForm = document.querySelector('#create-group-form');
 const joinGroupForm = document.querySelector('#join-group-form');
 const groupError = document.querySelector('#group-error');
 let editingTaskId = null;
+let selectedGroupId = null;
 
 function showCreateZone() {
   listZone.hidden = true;
@@ -75,7 +76,11 @@ async function deleteTask(id) {
 }
 
 async function loadTasks() {
-  const response = await fetch('/api/tasks', { cache: 'no-store' });
+  if (selectedGroupId === null) {
+    renderTasks([]);
+    return;
+  }
+  const response = await fetch(`/api/tasks?groupId=${selectedGroupId}`, { cache: 'no-store' });
   if (!response.ok) throw new Error('一覧を取得できませんでした');
   renderTasks(await response.json());
 }
@@ -93,9 +98,20 @@ async function loadGroups() {
   groupList.replaceChildren();
   groups.forEach((group) => {
     const item = document.createElement('li');
-    item.textContent = `${group.name}（参加ID: ${group.joinId}）`;
+    const selectButton = document.createElement('button');
+    selectButton.type = 'button';
+    selectButton.textContent = `${group.name}（参加ID: ${group.joinId}）`;
+    selectButton.addEventListener('click', async () => {
+      selectedGroupId = group.id;
+      await loadTasks();
+    });
+    item.append(selectButton);
     groupList.append(item);
   });
+  if (selectedGroupId === null && groups.length > 0) {
+    selectedGroupId = groups[0].id;
+    await loadTasks();
+  }
 }
 
 function hideGroupForms() {
@@ -115,6 +131,7 @@ form.addEventListener('submit', async (event) => {
   event.preventDefault();
   formError.textContent = '';
   const values = Object.fromEntries(new FormData(form));
+  values.groupId = selectedGroupId;
   try {
     const response = await fetch(editingTaskId === null ? '/api/tasks' : `/api/tasks/${editingTaskId}`, {
       method: editingTaskId === null ? 'POST' : 'PUT',

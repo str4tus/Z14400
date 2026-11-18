@@ -14,26 +14,35 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 import oit.is.team8.z14400.model.Task;
 import oit.is.team8.z14400.model.TaskMapper;
+import oit.is.team8.z14400.model.GroupMapper;
+import oit.is.team8.z14400.model.User;
+import oit.is.team8.z14400.model.UserMapper;
 
 @RestController
 @RequestMapping("/api/tasks")
 public class TaskController {
 
   private final TaskMapper taskMapper;
+  private final GroupMapper groupMapper;
+  private final UserMapper userMapper;
 
-  public TaskController(TaskMapper taskMapper) {
+  public TaskController(TaskMapper taskMapper, GroupMapper groupMapper, UserMapper userMapper) {
     this.taskMapper = taskMapper;
+    this.groupMapper = groupMapper;
+    this.userMapper = userMapper;
   }
 
   @GetMapping
-  public List<Task> list(@AuthenticationPrincipal UserDetails user) {
-    List<Task> tasks = taskMapper.findAll();
+  public List<Task> list(@RequestParam Long groupId, @AuthenticationPrincipal UserDetails user) {
+    requireMembership(groupId, user);
+    List<Task> tasks = taskMapper.findAllByGroupId(groupId);
     tasks.forEach(task -> task.setCanDelete(task.getCreator().equals(user.getUsername())));
     return tasks;
   }
@@ -51,18 +60,31 @@ public class TaskController {
   @PostMapping
   @ResponseStatus(HttpStatus.CREATED)
   public Task create(@RequestBody Task task, @AuthenticationPrincipal UserDetails user) {
+    requireMembership(task.getGroupId(), user);
     task.setCreator(user.getUsername());
     taskMapper.insert(task);
     return task;
   }
 
   @PutMapping("/{id}")
-  public Task update(@PathVariable Long id, @RequestBody Task task) {
+  public Task update(@PathVariable Long id, @RequestBody Task task,
+      @AuthenticationPrincipal UserDetails user) {
+    requireMembership(task.getGroupId(), user);
     task.setId(id);
     if (taskMapper.update(task) == 0) {
       throw new ResponseStatusException(HttpStatus.NOT_FOUND);
     }
     return taskMapper.findById(id);
+  }
+
+  private void requireMembership(Long groupId, UserDetails userDetails) {
+    if (groupId == null || userDetails == null) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "グループが必要です");
+    }
+    User user = userMapper.findByUsername(userDetails.getUsername());
+    if (user == null || !groupMapper.isMember(groupId, user.getId())) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, "グループに所属していません");
+    }
   }
 
   @DeleteMapping("/{id}")

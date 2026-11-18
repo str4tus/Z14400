@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 public class Task {
 
   private Long id;
+  private Long groupId;
   private String creator;
   private String content;
   private String assignee;
@@ -22,6 +23,14 @@ public class Task {
 
   public void setId(Long id) {
     this.id = id;
+  }
+
+  public Long getGroupId() {
+    return groupId;
+  }
+
+  public void setGroupId(Long groupId) {
+    this.groupId = groupId;
   }
 
   public String getCreator() {
