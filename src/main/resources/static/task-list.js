@@ -5,6 +5,10 @@ const form = document.querySelector('#task-form');
 const formError = document.querySelector('#form-error');
 const formTitle = document.querySelector('#task-form-title');
 const submitTask = document.querySelector('#submit-task');
+const groupList = document.querySelector('#group-list');
+const createGroupForm = document.querySelector('#create-group-form');
+const joinGroupForm = document.querySelector('#join-group-form');
+const groupError = document.querySelector('#group-error');
 let editingTaskId = null;
 
 function showCreateZone() {
@@ -76,6 +80,29 @@ async function loadTasks() {
   renderTasks(await response.json());
 }
 
+async function groupCsrfToken() {
+  const response = await fetch('/api/groups/csrf');
+  if (!response.ok) throw new Error('操作の準備に失敗しました');
+  return (await response.json()).token;
+}
+
+async function loadGroups() {
+  const response = await fetch('/api/groups', { cache: 'no-store' });
+  if (!response.ok) throw new Error('グループ一覧を取得できませんでした');
+  const groups = await response.json();
+  groupList.replaceChildren();
+  groups.forEach((group) => {
+    const item = document.createElement('li');
+    item.textContent = `${group.name}（参加ID: ${group.joinId}）`;
+    groupList.append(item);
+  });
+}
+
+function hideGroupForms() {
+  createGroupForm.hidden = true;
+  joinGroupForm.hidden = true;
+}
+
 document.querySelector('#show-create').addEventListener('click', () => {
   editingTaskId = null;
   form.reset();
@@ -109,6 +136,75 @@ form.addEventListener('submit', async (event) => {
   }
 });
 
+document.querySelector('#show-create-group').addEventListener('click', () => {
+  hideGroupForms();
+  createGroupForm.hidden = false;
+  groupError.textContent = '';
+});
+
+document.querySelector('#show-join-group').addEventListener('click', () => {
+  hideGroupForms();
+  joinGroupForm.hidden = false;
+  groupError.textContent = '';
+});
+
+document.querySelector('#cancel-create-group').addEventListener('click', () => {
+  hideGroupForms();
+  createGroupForm.reset();
+});
+
+document.querySelector('#cancel-join-group').addEventListener('click', () => {
+  hideGroupForms();
+  joinGroupForm.reset();
+});
+
+createGroupForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  groupError.textContent = '';
+  const values = Object.fromEntries(new FormData(createGroupForm));
+  try {
+    const response = await fetch('/api/groups', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': await groupCsrfToken()
+      },
+      body: JSON.stringify(values)
+    });
+    if (!response.ok) throw new Error('グループの作成に失敗しました');
+    createGroupForm.reset();
+    hideGroupForms();
+    await loadGroups();
+  } catch (error) {
+    groupError.textContent = error.message;
+  }
+});
+
+joinGroupForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  groupError.textContent = '';
+  const values = Object.fromEntries(new FormData(joinGroupForm));
+  values.joinId = values.joinId.trim().toUpperCase();
+  try {
+    const response = await fetch('/api/groups/join', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': await groupCsrfToken()
+      },
+      body: JSON.stringify(values)
+    });
+    if (!response.ok) {
+      throw new Error(response.status === 404 ? '参加IDが無効です' : '参加に失敗しました');
+    }
+    joinGroupForm.reset();
+    hideGroupForms();
+    await loadGroups();
+  } catch (error) {
+    groupError.textContent = error.message;
+  }
+});
+
 loadTasks().catch((error) => {
   formError.textContent = error.message;
 });
@@ -120,3 +216,7 @@ setInterval(() => {
     });
   }
 }, 3000);
+
+loadGroups().catch((error) => {
+  groupError.textContent = error.message;
+});
