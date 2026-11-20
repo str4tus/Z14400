@@ -5,6 +5,7 @@ import java.util.List;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Options;
+import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Update;
@@ -43,6 +44,6 @@ public interface TaskMapper {
       """)
   Task findById(Long id);
 
-  @Delete("DELETE FROM tasks WHERE id = #{id}")
-  int deleteById(Long id);
+  @Delete("DELETE FROM tasks WHERE id = #{id} AND group_id = #{groupId}")
+  int deleteById(@Param("id") Long id, @Param("groupId") Long groupId);
 }
