@@ -21,6 +21,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import oit.is.team8.z14400.model.Task;
 import oit.is.team8.z14400.model.TaskMapper;
+import oit.is.team8.z14400.model.Group;
 import oit.is.team8.z14400.model.GroupMapper;
 import oit.is.team8.z14400.model.User;
 import oit.is.team8.z14400.model.UserMapper;
@@ -41,9 +42,10 @@ public class TaskController {
 
   @GetMapping
   public List<Task> list(@RequestParam Long groupId, @AuthenticationPrincipal UserDetails user) {
-    requireMembership(groupId, user);
+    User currentUser = requireMembership(groupId, user);
+    Group group = groupMapper.findById(groupId);
     List<Task> tasks = taskMapper.findAllByGroupId(groupId);
-    tasks.forEach(task -> task.setCanDelete(task.getCreator().equals(user.getUsername())));
+    tasks.forEach(task -> task.setCanDelete(canDelete(task, group, currentUser)));
     return tasks;
   }
 
@@ -77,7 +79,7 @@ public class TaskController {
     return taskMapper.findById(id);
   }
 
-  private void requireMembership(Long groupId, UserDetails userDetails) {
+  private User requireMembership(Long groupId, UserDetails userDetails) {
     if (groupId == null || userDetails == null) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "グループが必要です");
     }
@@ -85,6 +87,12 @@ public class TaskController {
     if (user == null || !groupMapper.isMember(groupId, user.getId())) {
       throw new ResponseStatusException(HttpStatus.FORBIDDEN, "グループに所属していません");
     }
+    return user;
+  }
+
+  private boolean canDelete(Task task, Group group, User user) {
+    return user.getUsername().equals(task.getCreator())
+        || user.getId().equals(group.getAdminUserId());
   }
 
   @DeleteMapping("/{id}")
@@ -94,9 +102,11 @@ public class TaskController {
     if (task == null) {
       throw new ResponseStatusException(HttpStatus.NOT_FOUND);
     }
-    if (!task.getCreator().equals(user.getUsername())) {
+    User currentUser = requireMembership(task.getGroupId(), user);
+    Group group = groupMapper.findById(task.getGroupId());
+    if (!canDelete(task, group, currentUser)) {
       throw new ResponseStatusException(HttpStatus.FORBIDDEN);
     }
-    taskMapper.deleteById(id);
+    taskMapper.deleteById(id, task.getGroupId());
   }
 }

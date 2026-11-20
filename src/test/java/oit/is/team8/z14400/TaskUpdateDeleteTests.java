@@ -53,7 +53,7 @@ class TaskUpdateDeleteTests {
 
   @Test
   @WithMockUser(username = "task-owner")
-  void 作成者のタスク一覧だけ削除可能になる() throws Exception {
+  void 作成者または管理者のタスク一覧だけ削除可能になる() throws Exception {
     Group group = createGroup("task-owner", "different-user");
     createTask(group, "task-owner", "自分のタスク", "未着手");
     createTask(group, "different-user", "他人のタスク", "未着手");
@@ -61,7 +61,7 @@ class TaskUpdateDeleteTests {
     mockMvc.perform(get("/api/tasks").param("groupId", group.getId().toString()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[?(@.creator == 'task-owner')].canDelete", everyItem(is(true))))
-        .andExpect(jsonPath("$[?(@.creator == 'different-user')].canDelete", everyItem(is(false))));
+        .andExpect(jsonPath("$[?(@.creator == 'different-user')].canDelete", everyItem(is(true))));
   }
 
   @Test
@@ -105,6 +105,31 @@ class TaskUpdateDeleteTests {
   @WithMockUser(username = "different-user")
   void 作成者以外はタスクを削除できない() throws Exception {
     Task task = createTask("task-owner", "他人のタスク", "未着手");
+
+    mockMvc.perform(delete("/api/tasks/" + task.getId()).with(csrf()))
+        .andExpect(status().isForbidden());
+
+    org.junit.jupiter.api.Assertions.assertNotNull(taskMapper.findById(task.getId()));
+  }
+
+  @Test
+  @WithMockUser(username = "group-admin")
+  void 管理者は他人のタスクを削除できる() throws Exception {
+    Group group = createGroup("group-admin", "task-owner");
+    Task task = createTask(group, "task-owner", "管理者が削除するタスク", "未着手");
+
+    mockMvc.perform(delete("/api/tasks/" + task.getId()).with(csrf()))
+        .andExpect(status().isNoContent());
+
+    org.junit.jupiter.api.Assertions.assertNull(taskMapper.findById(task.getId()));
+  }
+
+  @Test
+  @WithMockUser(username = "outsider")
+  void グループに所属していないユーザーはタスクを削除できない() throws Exception {
+    Group group = createGroup("task-owner");
+    Task task = createTask(group, "task-owner", "所属外から守るタスク", "未着手");
+    createUser("outsider");
 
     mockMvc.perform(delete("/api/tasks/" + task.getId()).with(csrf()))
         .andExpect(status().isForbidden());

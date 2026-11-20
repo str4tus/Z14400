@@ -68,7 +68,7 @@ async function deleteTask(id) {
       method: 'DELETE',
       headers: { 'X-CSRF-TOKEN': await csrfToken() }
     });
-    if (!response.ok) throw new Error(response.status === 403 ? '作成者だけが削除できます' : '削除に失敗しました');
+    if (!response.ok) throw new Error(response.status === 403 ? '作成者または管理者だけが削除できます' : '削除に失敗しました');
     await loadTasks();
   } catch (error) {
     formError.textContent = error.message;
