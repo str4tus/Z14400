@@ -11,6 +11,7 @@ const joinGroupForm = document.querySelector('#join-group-form');
 const groupError = document.querySelector('#group-error');
 let editingTaskId = null;
 let selectedGroupId = null;
+let taskLoadSequence = 0;
 
 function showCreateZone() {
   listZone.hidden = true;
@@ -76,13 +77,19 @@ async function deleteTask(id) {
 }
 
 async function loadTasks() {
+  const requestedGroupId = selectedGroupId;
+  const requestSequence = ++taskLoadSequence;
   if (selectedGroupId === null) {
     renderTasks([]);
     return;
   }
-  const response = await fetch(`/api/tasks?groupId=${selectedGroupId}`, { cache: 'no-store' });
+  const response = await fetch(`/api/tasks?groupId=${requestedGroupId}`, { cache: 'no-store' });
+  if (requestSequence !== taskLoadSequence || requestedGroupId !== selectedGroupId) return;
   if (!response.ok) throw new Error('一覧を取得できませんでした');
-  renderTasks(await response.json());
+  const tasks = await response.json();
+  if (requestSequence === taskLoadSequence && requestedGroupId === selectedGroupId) {
+    renderTasks(tasks);
+  }
 }
 
 async function groupCsrfToken() {
