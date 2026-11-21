@@ -113,11 +113,24 @@ async function loadGroups() {
       await loadTasks();
     });
     item.append(selectButton);
+    if (group.canDissolve) {
+      const dissolveButton = document.createElement('button');
+      dissolveButton.type = 'button';
+      dissolveButton.textContent = 'グループを解散';
+      dissolveButton.addEventListener('click', () => dissolveGroup(group));
+      item.append(' ', dissolveButton);
+    }
     groupList.append(item);
   });
+  const selectedStillExists = groups.some((group) => group.id === selectedGroupId);
+  if (!selectedStillExists) {
+    selectedGroupId = null;
+  }
   if (selectedGroupId === null && groups.length > 0) {
     selectedGroupId = groups[0].id;
     await loadTasks();
+  } else if (selectedGroupId === null) {
+    renderTasks([]);
   }
 }
 
@@ -229,15 +242,41 @@ joinGroupForm.addEventListener('submit', async (event) => {
   }
 });
 
+async function dissolveGroup(group) {
+  if (!window.confirm(`「${group.name}」を解散しますか？`)) return;
+  groupError.textContent = '';
+  try {
+    const response = await fetch(`/api/groups/${group.id}`, {
+      method: 'DELETE',
+      headers: { 'X-CSRF-TOKEN': await groupCsrfToken() }
+    });
+    if (!response.ok) {
+      throw new Error(response.status === 403
+        ? 'グループ管理者だけが解散できます'
+        : 'グループを解散できませんでした');
+    }
+    if (selectedGroupId === group.id) {
+      selectedGroupId = null;
+      editingTaskId = null;
+      showListZone();
+    }
+    await loadGroups();
+  } catch (error) {
+    groupError.textContent = error.message;
+  }
+}
+
 loadTasks().catch((error) => {
   formError.textContent = error.message;
 });
 
 setInterval(() => {
   if (!document.hidden && createZone.hidden) {
-    loadTasks().catch((error) => {
-      formError.textContent = error.message;
-    });
+    loadGroups()
+      .then(() => loadTasks())
+      .catch((error) => {
+        groupError.textContent = error.message;
+      });
   }
 }, 3000);
 

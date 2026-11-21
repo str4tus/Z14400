@@ -46,4 +46,7 @@ public interface TaskMapper {
 
   @Delete("DELETE FROM tasks WHERE id = #{id} AND group_id = #{groupId}")
   int deleteById(@Param("id") Long id, @Param("groupId") Long groupId);
+
+  @Delete("DELETE FROM tasks WHERE group_id = #{groupId}")
+  int deleteByGroupId(@Param("groupId") Long groupId);
 }

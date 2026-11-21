@@ -15,6 +15,7 @@ public class Group {
   private String joinId;
   private Long adminUserId;
   private List<User> members = new ArrayList<>();
+  private boolean canDissolve;
 
   public Group() {
   }
@@ -77,5 +78,13 @@ public class Group {
 
   public void setMembers(List<User> members) {
     this.members = members != null ? members : new ArrayList<>();
+  }
+
+  public boolean isCanDissolve() {
+    return canDissolve;
+  }
+
+  public void setCanDissolve(boolean canDissolve) {
+    this.canDissolve = canDissolve;
   }
 }

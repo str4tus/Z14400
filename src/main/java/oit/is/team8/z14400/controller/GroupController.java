@@ -7,7 +7,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.csrf.CsrfToken;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,6 +22,7 @@ import oit.is.team8.z14400.model.Group;
 import oit.is.team8.z14400.model.GroupMapper;
 import oit.is.team8.z14400.model.User;
 import oit.is.team8.z14400.model.UserMapper;
+import oit.is.team8.z14400.model.TaskMapper;
 
 @RestController
 @RequestMapping("/api/groups")
@@ -26,10 +30,12 @@ public class GroupController {
 
   private final GroupMapper groupMapper;
   private final UserMapper userMapper;
+  private final TaskMapper taskMapper;
 
-  public GroupController(GroupMapper groupMapper, UserMapper userMapper) {
+  public GroupController(GroupMapper groupMapper, UserMapper userMapper, TaskMapper taskMapper) {
     this.groupMapper = groupMapper;
     this.userMapper = userMapper;
+    this.taskMapper = taskMapper;
   }
 
   @GetMapping("/csrf")
@@ -40,7 +46,9 @@ public class GroupController {
   @GetMapping
   public List<Group> list(@AuthenticationPrincipal UserDetails userDetails) {
     User user = requireUser(userDetails);
-    return groupMapper.findGroupsByUserId(user.getId());
+    List<Group> groups = groupMapper.findGroupsByUserId(user.getId());
+    groups.forEach(group -> group.setCanDissolve(user.getId().equals(group.getAdminUserId())));
+    return groups;
   }
 
   @PostMapping
@@ -78,6 +86,25 @@ public class GroupController {
       groupMapper.insertMembership(group.getId(), user.getId());
     }
     return group;
+  }
+
+  @DeleteMapping("/{id}")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  @Transactional
+  public void dissolve(@PathVariable Long id,
+      @AuthenticationPrincipal UserDetails userDetails) {
+    User user = requireUser(userDetails);
+    Group group = groupMapper.findById(id);
+    if (group == null) {
+      throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+    }
+    if (!group.getAdminUserId().equals(user.getId())) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+    }
+
+    taskMapper.deleteByGroupId(id);
+    groupMapper.deleteMembershipByGroupId(id);
+    groupMapper.deleteById(id);
   }
 
   private User requireUser(UserDetails userDetails) {
