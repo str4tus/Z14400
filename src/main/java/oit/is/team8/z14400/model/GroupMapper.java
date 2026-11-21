@@ -2,6 +2,7 @@ package oit.is.team8.z14400.model;
 
 import java.util.List;
 
+import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Options;
@@ -114,5 +115,28 @@ public interface GroupMapper {
       group.setMembers(findMembersByGroupId(groupId));
     }
     return group;
+  }
+
+  @Delete("""
+      DELETE FROM group_memberships
+      WHERE group_id = #{groupId}
+      """)
+  int deleteMembershipsByGroupId(Long groupId);
+
+  @Delete("""
+      DELETE FROM task_groups
+      WHERE id = #{id}
+      """)
+  int deleteGroupById(Long id);
+
+  @Delete("DELETE FROM group_memberships WHERE group_id = #{groupId}")
+  int deleteMembershipByGroupId(@Param("groupId") Long groupId);
+
+  @Delete("DELETE FROM task_groups WHERE id = #{id}")
+  int deleteById(@Param("id") Long id);
+
+  default void deleteGroup(Long groupId) {
+    deleteMembershipsByGroupId(groupId);
+    deleteGroupById(groupId);
   }
 }
