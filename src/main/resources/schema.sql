@@ -19,8 +19,8 @@ CREATE TABLE IF NOT EXISTS tasks (
   content VARCHAR(500) NOT NULL,
   assignee VARCHAR(100) NOT NULL,
   status VARCHAR(50) NOT NULL,
-  start_at TIMESTAMP NOT NULL,
-  end_at TIMESTAMP NOT NULL,
+  start_at TIMESTAMP NULL,
+  end_at TIMESTAMP NULL,
   FOREIGN KEY (group_id) REFERENCES task_groups(id) ON DELETE CASCADE
 );
 CREATE TABLE IF NOT EXISTS group_memberships (

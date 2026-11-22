@@ -1,5 +1,6 @@
 package oit.is.team8.z14400.controller;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -63,6 +64,7 @@ public class TaskController {
   @ResponseStatus(HttpStatus.CREATED)
   public Task create(@RequestBody Task task, @AuthenticationPrincipal UserDetails user) {
     requireMembership(task.getGroupId(), user);
+    normalizeTaskDateTime(task);
     task.setCreator(user.getUsername());
     taskMapper.insert(task);
     return task;
@@ -72,11 +74,31 @@ public class TaskController {
   public Task update(@PathVariable Long id, @RequestBody Task task,
       @AuthenticationPrincipal UserDetails user) {
     requireMembership(task.getGroupId(), user);
+    normalizeTaskDateTime(task);
     task.setId(id);
     if (taskMapper.update(task) == 0) {
       throw new ResponseStatusException(HttpStatus.NOT_FOUND);
     }
     return taskMapper.findById(id);
+  }
+
+  private void normalizeTaskDateTime(Task task) {
+    LocalDateTime startAt = task.getStartAt();
+    LocalDateTime endAt = task.getEndAt();
+
+    if (startAt == null && endAt == null) {
+      return;
+    }
+    if (startAt == null) {
+      task.setStartAt(LocalDateTime.now());
+      startAt = task.getStartAt();
+    }
+    if (endAt == null) {
+      return;
+    }
+    if (endAt.isBefore(startAt)) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "終了日時は開始日時以降にしてください");
+    }
   }
 
   private User requireMembership(Long groupId, UserDetails userDetails) {
