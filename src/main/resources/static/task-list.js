@@ -27,7 +27,7 @@ function renderTasks(tasks) {
   taskList.replaceChildren();
   tasks.forEach((task) => {
     const item = document.createElement('li');
-    item.textContent = `${task.content} / 担当者: ${task.assignee} / 状態: ${task.status} / ${task.startAt} - ${task.endAt}`;
+    item.textContent = `${task.content} / 担当者: ${task.assignee} / 状態: ${task.status} / ${formatTaskDateTime(task)}`;
     const editButton = document.createElement('button');
     editButton.type = 'button';
     editButton.textContent = '編集';
@@ -51,8 +51,8 @@ function startEdit(task) {
   form.elements.content.value = task.content;
   form.elements.assignee.value = task.assignee;
   form.elements.status.value = task.status;
-  form.elements.startAt.value = task.startAt;
-  form.elements.endAt.value = task.endAt;
+  form.elements.startAt.value = task.startAt ?? '';
+  form.elements.endAt.value = task.endAt ?? '';
   showCreateZone();
 }
 
@@ -152,6 +152,8 @@ form.addEventListener('submit', async (event) => {
   formError.textContent = '';
   const values = Object.fromEntries(new FormData(form));
   values.groupId = selectedGroupId;
+  values.startAt = values.startAt === '' ? null : values.startAt;
+  values.endAt = values.endAt === '' ? null : values.endAt;
   try {
     const response = await fetch(editingTaskId === null ? '/api/tasks' : `/api/tasks/${editingTaskId}`, {
       method: editingTaskId === null ? 'POST' : 'PUT',
@@ -161,7 +163,12 @@ form.addEventListener('submit', async (event) => {
       },
       body: JSON.stringify(values)
     });
-    if (!response.ok) throw new Error('登録に失敗しました');
+    if (!response.ok) {
+      if (response.status === 400) {
+        throw new Error('終了日時は開始日時以降にしてください');
+      }
+      throw new Error('登録に失敗しました');
+    }
     form.reset();
     editingTaskId = null;
     formTitle.textContent = 'タスク登録';
@@ -264,6 +271,18 @@ async function dissolveGroup(group) {
   } catch (error) {
     groupError.textContent = error.message;
   }
+}
+
+const taskStartAtInput = form.elements.startAt;
+const taskEndAtInput = form.elements.endAt;
+taskStartAtInput.required = false;
+taskEndAtInput.required = false;
+
+function formatTaskDateTime(task) {
+  if (task.startAt === null && task.endAt === null) return '期限なし';
+  const startAt = task.startAt ?? '期限なし';
+  const endAt = task.endAt ?? '期限なし';
+  return `${startAt} - ${endAt}`;
 }
 
 loadTasks().catch((error) => {
